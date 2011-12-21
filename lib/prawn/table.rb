@@ -17,7 +17,7 @@ require 'prawn/table/cell/span_dummy'
 module Prawn
 
   class Document
-    
+
     # Set up and draw a table on this document. A block can be given, which will
     # be run after cell setup but before layout and drawing.
     #
@@ -51,7 +51,7 @@ module Prawn
   #   Produces a text cell. This is the most common usage.
   # Prawn::Table::Cell::
   #   If you have already built a Cell or have a custom subclass of Cell you
-  #   want to use in a table, you can pass through Cell objects. 
+  #   want to use in a table, you can pass through Cell objects.
   # Prawn::Table::
   #   Creates a subtable (a table within a cell). You can use
   #   Prawn::Document#make_table to create a table for use as a subtable
@@ -78,7 +78,7 @@ module Prawn
   #   (for styling and other row-specific options) always indexes based on
   #   your data array. Whether or not you have a header, row(n) always refers
   #   to the nth element (starting from 0) of the +data+ array.
-  # +column_widths+:: 
+  # +column_widths+::
   #   Sets widths for individual columns. Manually setting widths can give
   #   better results than letting Prawn guess at them, as Prawn's algorithm
   #   for defaulting widths is currently pretty boneheaded. If you experience
@@ -101,7 +101,7 @@ module Prawn
   #   pdf.table(data) do |table|
   #     table.rows(1..3).width = 72
   #   end
-  # 
+  #
   # As with Prawn::Document#initialize, if the block has no arguments, it will
   # be evaluated in the context of the object itself. The above code could be
   # rewritten as:
@@ -110,7 +110,7 @@ module Prawn
   #     rows(1..3).width = 72
   #   end
   #
-  class Table  
+  class Table
 
     # Set up a table on the given document. Arguments:
     #
@@ -137,7 +137,7 @@ module Prawn
       set_column_widths
       set_row_heights
       position_cells
-    end                                        
+    end
 
     # Number of rows in the table.
     #
@@ -170,9 +170,9 @@ module Prawn
     # Sets column widths for the table. The argument can be one of the following
     # types:
     #
-    # +Array+:: 
+    # +Array+::
     #   <tt>[w0, w1, w2, ...]</tt> (specify a width for each column)
-    # +Hash+:: 
+    # +Hash+::
     #   <tt>{0 => w0, 1 => w1, ...}</tt> (keys are column names, values are
     #   widths)
     # +Numeric+::
@@ -234,6 +234,13 @@ module Prawn
       stylable.style(style_hash, &block)
     end
 
+    # Sets bottom margin for table mainly for multiple pages and footer.
+    # It is then checked in table draw method
+    #
+    def bottom_margin=(amount)
+      @bottom_margin = amount
+    end
+
     # Draws the table onto the document at the document's current y-position.
     #
     def draw
@@ -243,9 +250,9 @@ module Prawn
         # y-position to get to the actual position on the current page.
         offset = @pdf.y
 
-        # Reference bounds are the non-stretchy bounds used to decide when to
-        # flow to a new column / page.
-        ref_bounds = @pdf.reference_bounds
+        # Botom is used to decide when to flow to a new column / page.
+        # It is either set bottom margin or absolute bottom of the non-stretchy bounds
+        bottom = @bottom_margin || @pdf.reference_bounds.absolute_bottom
 
         last_y = @pdf.y
 
@@ -269,7 +276,7 @@ module Prawn
           # (excluding the header), start the table on the next page.
           needed_height = row(0).height
           needed_height += row(1).height if @header
-          if needed_height > @pdf.y - ref_bounds.absolute_bottom
+          if needed_height > @pdf.y - bottom
             @pdf.bounds.move_past_bottom
             offset = @pdf.y
             started_new_page_at_row = 0
@@ -281,7 +288,7 @@ module Prawn
         cells_this_page = []
 
         @cells.each do |cell|
-          if cell.height > (cell.y + offset) - ref_bounds.absolute_bottom &&
+          if cell.height > (cell.y + offset) - bottom &&
              cell.row > started_new_page_at_row
             # Ink all cells on the current page
             Cell.draw_cells(cells_this_page)
@@ -293,14 +300,14 @@ module Prawn
             offset = @pdf.y - cell.y
             started_new_page_at_row = cell.row
           end
-   
+
           # Don't modify cell.x / cell.y here, as we want to reuse the original
           # values when re-inking the table. #draw should be able to be called
           # multiple times.
           x, y = cell.x, cell.y
-          y += offset 
+          y += offset
 
-          # Translate coordinates to the bounds we are in, since drawing is 
+          # Translate coordinates to the bounds we are in, since drawing is
           # relative to the cursor, not ref_bounds.
           x += @pdf.bounds.left_side - @pdf.bounds.absolute_left
           y -= @pdf.bounds.absolute_bottom
@@ -398,7 +405,7 @@ module Prawn
       assert_proper_table_data(data)
 
       cells = Cells.new
-      
+
       row_number = 0
       data.each do |row_cells|
         column_number = 0
@@ -517,7 +524,7 @@ module Prawn
     # values that will be used to ink the table.
     #
     def set_column_widths
-      column_widths.each_with_index do |w, col_num| 
+      column_widths.each_with_index do |w, col_num|
         column(col_num).width = w
       end
     end
@@ -534,7 +541,7 @@ module Prawn
     #
     def position_cells
       # Calculate x- and y-positions as running sums of widths / heights.
-      x_positions = column_widths.inject([0]) { |ary, x| 
+      x_positions = column_widths.inject([0]) { |ary, x|
         ary << (ary.last + x); ary }[0..-2]
       x_positions.each_with_index { |x, i| column(i).x = x }
 
